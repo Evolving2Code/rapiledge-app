@@ -32,6 +32,13 @@ export default async function SignupPage({
           <p className="mt-2 text-sm text-muted-foreground">
             Nothing gets logged just to be logged.
           </p>
+          {!configured && (
+            <p className="mt-4 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              Supabase is not configured. Add{" "}
+              <code>NEXT_PUBLIC_SUPABASE_URL</code> and a publishable key, then
+              run the SQL in <code>supabase/migrations</code>.
+            </p>
+          )}
           {error && (
             <p className="mt-4 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {error}

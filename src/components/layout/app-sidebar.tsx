@@ -8,6 +8,7 @@ import {
   Kanban,
   CheckSquare,
   Zap,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ const navItems = [
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/pipeline", label: "Pipeline", icon: Kanban },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function AppSidebar() {

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BriefMePanel } from "@/components/brief-me/brief-me-panel";
+import { ComposeEmailDialog } from "@/components/email/compose-email-dialog";
 import { ActivityTimeline } from "@/components/timeline/activity-timeline";
 import { DealsPanel } from "@/components/deals/deals-panel";
 import { NotesPanel } from "@/components/notes/notes-panel";
@@ -45,7 +46,7 @@ export default async function ContactDetailPage({
 
   const typedContact = contact as Contact & { company: Company | null };
 
-  const [activitiesRes, notesRes, tasksRes, dealsRes] = await Promise.all([
+  const [activitiesRes, notesRes, tasksRes, dealsRes, gmailRes] = await Promise.all([
     supabase
       .from("activities")
       .select("*")
@@ -62,6 +63,11 @@ export default async function ContactDetailPage({
       .eq("contact_id", id)
       .order("due_date", { ascending: true }),
     supabase.from("deals").select("*").eq("contact_id", id),
+    supabase
+      .from("google_integrations")
+      .select("id")
+      .eq("user_id", user!.id)
+      .maybeSingle(),
   ]);
 
   const name = contactDisplayName(typedContact);
@@ -115,20 +121,28 @@ export default async function ContactDetailPage({
                 </p>
               )}
 
-              <div className="mt-3 flex flex-wrap gap-4 text-sm">
+              <div className="mt-3 flex flex-wrap items-center gap-3">
                 {typedContact.email && (
-                  <a
-                    href={`mailto:${typedContact.email}`}
-                    className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
-                  >
-                    <Mail className="h-4 w-4" />
-                    {typedContact.email}
-                  </a>
+                  <>
+                    <a
+                      href={`mailto:${typedContact.email}`}
+                      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"
+                    >
+                      <Mail className="h-4 w-4" />
+                      {typedContact.email}
+                    </a>
+                    <ComposeEmailDialog
+                      contactId={id}
+                      contactEmail={typedContact.email}
+                      contactName={name}
+                      gmailConnected={!!gmailRes.data}
+                    />
+                  </>
                 )}
                 {typedContact.phone && (
                   <a
                     href={`tel:${typedContact.phone}`}
-                    className="flex items-center gap-1.5 text-muted-foreground hover:text-primary"
+                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"
                   >
                     <Phone className="h-4 w-4" />
                     {typedContact.phone}

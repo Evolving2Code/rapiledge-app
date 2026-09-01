@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { parseEmails, parseTags, readCustomFields } from "@/lib/forms";
 import { requireUser } from "@/lib/supabase/server";
 import type { DealStage } from "@/lib/types";
 
@@ -36,6 +37,7 @@ export async function updateCompany(id: string, formData: FormData) {
     .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath(`/companies/${id}`);
+  revalidatePath("/companies");
 }
 
 export async function deleteCompany(id: string) {
@@ -51,22 +53,9 @@ export async function createContact(formData: FormData) {
   const first_name = String(formData.get("first_name") ?? "").trim();
   const last_name = String(formData.get("last_name") ?? "").trim();
   if (!first_name) throw new Error("First name is required.");
-  const extraEmails = String(formData.get("emails") ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  const tags = String(formData.get("tags") ?? "")
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
-  const custom_fields: Record<string, string> = {};
-  const dog = String(formData.get("dog_name") ?? "").trim();
-  const dogBirthday = String(formData.get("dog_birthday") ?? "").trim();
-  if (dog) custom_fields.dog_name = dog;
-  if (dogBirthday) custom_fields.dog_birthday = dogBirthday;
-  const extraKey = String(formData.get("custom_key") ?? "").trim();
-  const extraVal = String(formData.get("custom_value") ?? "").trim();
-  if (extraKey && extraVal) custom_fields[extraKey] = extraVal;
+  const extraEmails = parseEmails(String(formData.get("emails") ?? ""));
+  const tags = parseTags(String(formData.get("tags") ?? ""));
+  const custom_fields = readCustomFields(formData);
 
   const { data, error } = await supabase
     .from("contacts")
@@ -91,22 +80,17 @@ export async function createContact(formData: FormData) {
 
 export async function updateContact(id: string, formData: FormData) {
   const { supabase } = await requireUser();
-  const extraEmails = String(formData.get("emails") ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  const tags = String(formData.get("tags") ?? "")
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
-  const custom_fields: Record<string, string> = {};
-  const dog = String(formData.get("dog_name") ?? "").trim();
-  const dogBirthday = String(formData.get("dog_birthday") ?? "").trim();
-  if (dog) custom_fields.dog_name = dog;
-  if (dogBirthday) custom_fields.dog_birthday = dogBirthday;
-  const extraKey = String(formData.get("custom_key") ?? "").trim();
-  const extraVal = String(formData.get("custom_value") ?? "").trim();
-  if (extraKey && extraVal) custom_fields[extraKey] = extraVal;
+  const { data: existing } = await supabase
+    .from("contacts")
+    .select("custom_fields")
+    .eq("id", id)
+    .single();
+  const extraEmails = parseEmails(String(formData.get("emails") ?? ""));
+  const tags = parseTags(String(formData.get("tags") ?? ""));
+  const custom_fields = readCustomFields(
+    formData,
+    (existing?.custom_fields ?? {}) as Record<string, string>,
+  );
 
   const { error } = await supabase
     .from("contacts")
@@ -124,6 +108,7 @@ export async function updateContact(id: string, formData: FormData) {
     .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath(`/contacts/${id}`);
+  revalidatePath("/contacts");
 }
 
 export async function deleteContact(id: string) {
@@ -202,15 +187,19 @@ export async function createDeal(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("Deal title is required.");
   const contactId = String(formData.get("contact_id") ?? "") || null;
-  const { error } = await supabase.from("deals").insert({
-    owner_id: userId,
-    title,
-    contact_id: contactId,
-    company_id: String(formData.get("company_id") ?? "") || null,
-    stage: (String(formData.get("stage") ?? "lead") as DealStage) || "lead",
-    value: Number(formData.get("value") ?? 0) || 0,
-    expected_close_date: String(formData.get("expected_close_date") ?? "") || null,
-  });
+  const { data, error } = await supabase
+    .from("deals")
+    .insert({
+      owner_id: userId,
+      title,
+      contact_id: contactId,
+      company_id: String(formData.get("company_id") ?? "") || null,
+      stage: (String(formData.get("stage") ?? "lead") as DealStage) || "lead",
+      value: Number(formData.get("value") ?? 0) || 0,
+      expected_close_date: String(formData.get("expected_close_date") ?? "") || null,
+    })
+    .select("id")
+    .single();
   if (error) throw new Error(error.message);
   if (contactId) {
     await supabase.rpc("log_activity", {
@@ -223,6 +212,9 @@ export async function createDeal(formData: FormData) {
   }
   revalidatePath("/pipeline");
   revalidatePath("/dashboard");
+  if (String(formData.get("next") ?? "") === "deal") {
+    redirect(`/pipeline/${data.id}`);
+  }
 }
 
 export async function updateDealStage(id: string, stage: DealStage) {
@@ -245,4 +237,66 @@ export async function updateDealStage(id: string, stage: DealStage) {
   }
   revalidatePath("/pipeline");
   revalidatePath("/dashboard");
+}
+
+export async function updateDeal(id: string, formData: FormData) {
+  const { supabase, userId } = await requireUser();
+  const title = String(formData.get("title") ?? "").trim();
+  const stage = String(formData.get("stage") ?? "lead") as DealStage;
+  const contactId = String(formData.get("contact_id") ?? "") || null;
+  const { data, error } = await supabase
+    .from("deals")
+    .update({
+      title,
+      stage,
+      value: Number(formData.get("value") ?? 0) || 0,
+      expected_close_date: String(formData.get("expected_close_date") ?? "") || null,
+      contact_id: contactId,
+      company_id: String(formData.get("company_id") ?? "") || null,
+    })
+    .eq("id", id)
+    .select("contact_id, title")
+    .single();
+  if (error) throw new Error(error.message);
+  if (data.contact_id) {
+    await supabase.rpc("log_activity", {
+      p_owner: userId,
+      p_contact: data.contact_id,
+      p_type: "deal_stage_change",
+      p_payload: { title: data.title, stage },
+    });
+    revalidatePath(`/contacts/${data.contact_id}`);
+  }
+  revalidatePath(`/pipeline/${id}`);
+  revalidatePath("/pipeline");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteDeal(id: string) {
+  const { supabase } = await requireUser();
+  const { data } = await supabase
+    .from("deals")
+    .select("contact_id")
+    .eq("id", id)
+    .single();
+  const { error } = await supabase.from("deals").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  if (data?.contact_id) revalidatePath(`/contacts/${data.contact_id}`);
+  revalidatePath("/pipeline");
+  revalidatePath("/dashboard");
+  redirect("/pipeline");
+}
+
+export async function deleteTask(id: string) {
+  const { supabase } = await requireUser();
+  const { data } = await supabase
+    .from("tasks")
+    .select("contact_id")
+    .eq("id", id)
+    .single();
+  const { error } = await supabase.from("tasks").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  if (data?.contact_id) revalidatePath(`/contacts/${data.contact_id}`);
 }

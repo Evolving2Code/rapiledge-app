@@ -40,6 +40,7 @@ export default async function PipelinePage() {
               <SheetTitle>New deal</SheetTitle>
             </SheetHeader>
             <form action={createDeal} className="space-y-3 px-4">
+              <input type="hidden" name="next" value="deal" />
               <div className="space-y-1">
                 <Label htmlFor="title">Title</Label>
                 <Input id="title" name="title" required />

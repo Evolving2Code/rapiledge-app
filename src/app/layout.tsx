@@ -27,6 +27,16 @@ export const metadata: Metadata = {
     template: `%s · ${APP_NAME}`,
   },
   description: POSITIONING_LINE,
+  openGraph: {
+    title: APP_NAME,
+    description: POSITIONING_LINE,
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: APP_NAME,
+    description: POSITIONING_LINE,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

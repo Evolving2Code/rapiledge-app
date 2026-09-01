@@ -19,7 +19,7 @@ The live UI is **Daylight Brief**: warm paper, ink, terracotta, serif headlines.
 ### 1. Supabase
 
 1. Create a project.
-2. Run `supabase/migrations/0001_init.sql` in the SQL editor.
+2. Run `supabase/migrations/0001_init.sql`, then `0002_meetings_calendar_unique.sql`, in the SQL editor.
 3. Auth → URL configuration: add `https://YOUR_DOMAIN/auth/callback` and `http://localhost:3000/auth/callback`.
 4. Copy the project URL and **publishable** (or legacy anon) key.
 
@@ -66,8 +66,10 @@ Sign up, then **Load sample ledger** on the dashboard to see Elena Voss, Nico th
 
 ## Routes that matter
 
-- `/contacts/[id]` — the product: header, timeline, pipeline, notes (manual vs AI), tasks, Brief me
-- `/pipeline` — kanban, drag to update stage
+- `/contacts/[id]` — the product: header, timeline, pipeline, notes (manual vs AI, polish with Claude), tasks, mail threads, Brief me
+- `/pipeline` — kanban, drag to update stage; `/pipeline/[id]` for deal detail
+- `/meetings` — log or sync calendar events, send a Recall.ai notetaker
+- `/api/search` — command palette (⌘K)
 - `/api/webhooks/gmail` — Pub/Sub push
 - `/api/cron/gmail-watch` — 7-day watch renewal
 - `/api/webhooks/recall` — transcript → Claude → `calls` + timeline

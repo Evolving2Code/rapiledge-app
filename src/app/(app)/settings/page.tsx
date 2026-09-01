@@ -1,4 +1,5 @@
 import { signOut } from "@/app/actions/auth";
+import { syncRecallCalendarForm } from "@/app/actions/meetings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { gmailConfigured } from "@/lib/gmail/client";
@@ -70,9 +71,16 @@ export default async function SettingsPage() {
           </p>
           {recall ? <p>Calendar connected.</p> : <p>Not connected.</p>}
           {recallConfigured() ? (
-            <Button asChild>
-              <a href="/api/recall/calendar">Connect calendar</a>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild>
+                <a href="/api/recall/calendar">Connect calendar</a>
+              </Button>
+              <form action={syncRecallCalendarForm}>
+                <Button type="submit" variant="outline">
+                  Sync events
+                </Button>
+              </form>
+            </div>
           ) : (
             <p className="text-destructive">Set RECALL_API_KEY in Vercel.</p>
           )}

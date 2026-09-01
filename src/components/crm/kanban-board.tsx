@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useOptimistic, useTransition } from "react";
 import {
   DndContext,
@@ -42,6 +43,13 @@ function DealCard({ deal }: { deal: Deal }) {
           ? ` · ${when(deal.contact.last_contact_at)}`
           : ""}
       </p>
+      <Link
+        href={`/pipeline/${deal.id}`}
+        className="mt-2 inline-block text-xs text-primary hover:underline"
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        Open
+      </Link>
     </div>
   );
 }

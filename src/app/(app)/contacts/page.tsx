@@ -4,18 +4,26 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { sanitizeSearch } from "@/lib/forms";
 import { fullName, initials, when } from "@/lib/format";
 import { requireUser } from "@/lib/supabase/server";
-import type { Contact } from "@/lib/types";
+import type { Company, Contact } from "@/lib/types";
 
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; company?: string; tag?: string }>;
 }) {
-  const { q } = await searchParams;
-  const query = typeof q === "string" ? q : "";
+  const { q, company, tag } = await searchParams;
+  const query = sanitizeSearch(typeof q === "string" ? q : "");
+  const companyId = typeof company === "string" ? company : "";
+  const tagFilter = typeof tag === "string" ? tag : "";
   const { supabase, userId } = await requireUser();
+  const { data: companies } = await supabase
+    .from("companies")
+    .select("*")
+    .eq("owner_id", userId)
+    .order("name");
   let request = supabase
     .from("contacts")
     .select("*, company:companies(*)")
@@ -26,8 +34,11 @@ export default async function ContactsPage({
       `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`,
     );
   }
+  if (companyId) request = request.eq("company_id", companyId);
+  if (tagFilter) request = request.contains("tags", [tagFilter]);
   const { data } = await request;
   const contacts = (data ?? []) as Contact[];
+  const tags = [...new Set(contacts.flatMap((contact) => contact.tags))].slice(0, 12);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -45,9 +56,34 @@ export default async function ContactsPage({
           </Button>
         </div>
       </div>
-      <form className="max-w-sm">
-        <Input name="q" placeholder="Search name or email" defaultValue={query} />
+      <form className="flex flex-wrap gap-2">
+        <Input name="q" placeholder="Search name or email" defaultValue={query} className="max-w-sm" />
+        <select
+          name="company"
+          defaultValue={companyId}
+          className="h-8 rounded-lg border border-input bg-background px-2.5 text-sm"
+        >
+          <option value="">All companies</option>
+          {((companies ?? []) as Company[]).map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+        <Input name="tag" placeholder="Tag" defaultValue={tagFilter} className="w-36" />
+        <Button type="submit" variant="outline">
+          Filter
+        </Button>
       </form>
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {tags.map((item) => (
+            <Link key={item} href={`/contacts?tag=${encodeURIComponent(item)}`}>
+              <Badge variant={item === tagFilter ? "default" : "secondary"}>{item}</Badge>
+            </Link>
+          ))}
+        </div>
+      )}
       <div className="divide-y rounded-xl bg-card ring-1 ring-foreground/10">
         {contacts.map((contact) => (
           <Link
@@ -63,12 +99,13 @@ export default async function ContactsPage({
               <p className="truncate text-sm text-muted-foreground">
                 {contact.job_title}
                 {contact.company ? ` · ${contact.company.name}` : ""}
+                {contact.email ? ` · ${contact.email}` : ""}
               </p>
             </div>
             <div className="hidden items-center gap-2 sm:flex">
-              {contact.tags.slice(0, 2).map((tag) => (
-                <Badge key={tag} variant="secondary">
-                  {tag}
+              {contact.tags.slice(0, 2).map((item) => (
+                <Badge key={item} variant="secondary">
+                  {item}
                 </Badge>
               ))}
             </div>

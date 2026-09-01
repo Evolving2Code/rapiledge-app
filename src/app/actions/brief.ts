@@ -1,6 +1,6 @@
 "use server";
 
-import { generateBrief } from "@/lib/ai/claude";
+import { cleanupNote, generateBrief, isAiConfigured } from "@/lib/ai/claude";
 import { requireUser } from "@/lib/supabase/server";
 import type { BriefMe, Call, EmailMessage, Note, Task } from "@/lib/types";
 import { fullName } from "@/lib/format";
@@ -60,4 +60,11 @@ export async function briefContact(contactId: string): Promise<BriefMe> {
     ),
     dealStage: deals?.[0]?.stage ?? null,
   });
+}
+
+export async function polishNoteDraft(body: string) {
+  const text = body.trim();
+  if (!text) throw new Error("Nothing to polish.");
+  if (!isAiConfigured()) throw new Error("AI is not configured.");
+  return cleanupNote(text);
 }

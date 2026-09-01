@@ -96,6 +96,7 @@ export type Activity = {
   type: ActivityType;
   payload: Record<string, unknown>;
   created_at: string;
+  contact?: Pick<Contact, "id" | "first_name" | "last_name"> | null;
 };
 
 export type Call = {

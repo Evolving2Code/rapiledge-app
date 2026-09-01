@@ -28,7 +28,7 @@ export default async function DashboardPage() {
       .order("due_date", { ascending: true }),
     supabase
       .from("activities")
-      .select("*")
+      .select("*, contact:contacts(id, first_name, last_name)")
       .eq("owner_id", userId)
       .order("created_at", { ascending: false })
       .limit(8),
@@ -129,7 +129,9 @@ export default async function DashboardPage() {
             {(meetings as Meeting[] | null)?.length ? (
               (meetings as Meeting[]).map((meeting) => (
                 <div key={meeting.id} className="text-sm">
-                  <p className="font-medium">{meeting.title}</p>
+                  <Link href="/meetings" className="font-medium hover:underline">
+                    {meeting.title}
+                  </Link>
                   <p className="text-muted-foreground">{whenDatetime(meeting.starts_at)}</p>
                   {meeting.contact && (
                     <Link
@@ -167,7 +169,14 @@ export default async function DashboardPage() {
                     )}
                   >
                     {dueLabel(task.due_date)}
-                    {task.contact ? ` · ${fullName(task.contact)}` : ""}
+                    {task.contact ? (
+                      <>
+                        {" · "}
+                        <Link className="hover:underline" href={`/contacts/${task.contact.id}`}>
+                          {fullName(task.contact)}
+                        </Link>
+                      </>
+                    ) : null}
                   </p>
                 </div>
                 {isOverdue(task.due_date, task.completed) && (
@@ -189,6 +198,17 @@ export default async function DashboardPage() {
               <p key={activity.id} className="text-sm">
                 <span className="text-muted-foreground">{when(activity.created_at)} · </span>
                 {activity.type.replaceAll("_", " ")}
+                {activity.contact ? (
+                  <>
+                    {" · "}
+                    <Link
+                      className="text-primary hover:underline"
+                      href={`/contacts/${activity.contact.id}`}
+                    >
+                      {fullName(activity.contact)}
+                    </Link>
+                  </>
+                ) : null}
               </p>
             ))}
             {(activities ?? []).length === 0 && (

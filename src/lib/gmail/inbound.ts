@@ -35,20 +35,25 @@ export async function ingestGmailNotification(emailAddress: string, historyId: s
     });
     if (!contactId) continue;
 
-    await supabase.from("email_threads").upsert(
-      {
-        owner_id: ownerId,
-        contact_id: contactId,
-        gmail_thread_id: parsed.threadId,
-        subject: parsed.subject,
-        last_message_at: parsed.date,
-      },
-      { onConflict: "owner_id,gmail_thread_id" },
-    );
+    const { data: thread } = await supabase
+      .from("email_threads")
+      .upsert(
+        {
+          owner_id: ownerId,
+          contact_id: contactId,
+          gmail_thread_id: parsed.threadId,
+          subject: parsed.subject,
+          last_message_at: parsed.date,
+        },
+        { onConflict: "owner_id,gmail_thread_id" },
+      )
+      .select("id")
+      .single();
 
     const { error } = await supabase.from("email_messages").insert({
       owner_id: ownerId,
       contact_id: contactId,
+      thread_id: thread?.id ?? null,
       gmail_message_id: parsed.id,
       direction: "received",
       from_email: parsed.fromEmail,

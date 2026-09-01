@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Mail,
   NotebookPen,
@@ -5,7 +6,7 @@ import {
   SquareCheckBig,
   GitBranch,
 } from "lucide-react";
-import { when } from "@/lib/format";
+import { fullName, when } from "@/lib/format";
 import type { Activity } from "@/lib/types";
 
 const ICONS = {
@@ -54,7 +55,20 @@ export function ActivityTimeline({ activities }: { activities: Activity[] }) {
             </div>
             <div className="min-w-0">
               <p className="text-sm leading-relaxed">{label(activity)}</p>
-              <p className="text-xs text-muted-foreground">{when(activity.created_at)}</p>
+              <p className="text-xs text-muted-foreground">
+                {when(activity.created_at)}
+                {activity.contact ? (
+                  <>
+                    {" · "}
+                    <Link
+                      href={`/contacts/${activity.contact.id}`}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {fullName(activity.contact)}
+                    </Link>
+                  </>
+                ) : null}
+              </p>
             </div>
           </li>
         );
